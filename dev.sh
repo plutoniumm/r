@@ -1,17 +1,23 @@
 #!/bin/bash
 
 # usage: $(col "red" "hello world")
-function col(){
-  case $1 in
-    "red") echo "\033[0;31m$2\033[0m";;
-    "green") echo "\033[0;32m$2\033[0m";;
-    "yellow") echo "\033[0;33m$2\033[0m";;
-    "blue") echo "\033[0;34m$2\033[0m";;
-    "purple") echo "\033[0;35m$2\033[0m";;
-    "cyan") echo "\033[0;36m$2\033[0m";;
-    "white") echo "\033[0;37m$2\033[0m";;
-    *) echo "$2";;
-  esac
+function red(){
+  echo "\033[0;31m$1\033[0m"
+}
+function green(){
+  echo "\033[0;32m$1\033[0m"
+}
+function yellow(){
+  echo "\033[0;33m$1\033[0m"
+}
+function blue(){
+  echo "\033[0;34m$1\033[0m"
+}
+function purple(){
+  echo "\033[0;35m$1\033[0m"
+}
+function cyan(){
+  echo "\033[0;36m$1\033[0m"
 }
 
 
@@ -27,11 +33,22 @@ function watch(){
 commands(){
   case $1 in
     "js") echo "npm run dev";;
-    "go") echo "go run main.go";;
-    "python") echo "python3 main.py";;
+    "go") echo "go run";;
+    "python") echo "python3";;
     "rust") echo "cargo run";;
     "c") echo "make run";;
     *) echo "unknown";;
+  esac
+}
+# default args for where needed
+args(){
+  case $1 in
+    "js") echo "";;
+    "go") echo "";;
+    "python") echo "server.py";;
+    "rust") echo "";;
+    "c") echo "";;
+    *) echo "";;
   esac
 }
 
@@ -53,22 +70,22 @@ function detect(){
   fi
 }
 
-function main(){
-  lang=$(detect)
-  if [ "$lang" == "unknown" ]; then
-    echo "Unknown language"
-    exit 1
-  fi
-  cmd=$(commands $lang)
-  echo "Starting dev server for $(col "blue" $lang) at $(col "cyan" "$(date)")"
-  echo "\tw $(col "green" "$cmd")\n\t@$(col "yellow" $PWD)"
+lang=$(detect)
+if [ "$lang" == "unknown" ]; then
+  echo "Unknown language"
+  exit 1
+fi
+args=$(args $lang)
+cmd=$(commands $lang)
 
-  # only, go, c, python need a watcher
-  if [ "$lang" == "go" ] || [ "$lang" == "c" ] || [ "$lang" == "python" ]; then
-    watch . $cmd
-  else
-    $cmd
-  fi
-}
+cmd="$cmd $args"
+echo "Starting dev server for $(blue $lang) at $(cyan "$(date)")"
+echo "\tw $(green "$cmd")\n\t@$(yellow $PWD)"
 
-main
+# only, go, c, python need a watcher
+# we also pass in all args as is
+if [ "$lang" == "go" ] || [ "$lang" == "c" ] || [ "$lang" == "python" ]; then
+  watch . $cmd $@
+else
+  $cmd $@
+fi
