@@ -1,6 +1,4 @@
 #!/bin/bash
-
-# usage: $(col "red" "hello world")
 function red(){
   echo "\033[0;31m$1\033[0m"
 }
@@ -20,20 +18,36 @@ function cyan(){
   echo "\033[0;36m$1\033[0m"
 }
 
-
-# This script is used to run the development server by auto detecting the
-# language of proj and using the appropriate development server.
+# detect terminate
+trap ctrl_c INT
+function ctrl_c() {
+  echo "$(red "\n\nTerminating dev server")"
+  pkill -9 -f "r239" && wait
+  exit 0
+}
 
 # fswatch to check for file changes
-function watch(){
-  fswatch -o $1 | xargs -n1 -I{} $2
+function watch() {
+  pname="r239"
+  # kill existing processes for good measure
+  pkill -9 -f $pname && wait
+  script="exec -a $pname $1"
+
+  while true
+  do
+    bash -c "$script" &
+    fswatch -1 .
+
+    pkill -9 -f $pname && wait
+    echo "Restarting $pname"
+  done
 }
 
 # bash.v3 returns commands + flags
 commands(){
   case $1 in
     "js") echo "npm run dev";;
-    "go") echo "go run";;
+    "go") echo "go run *.go";;
     "python") echo "python3";;
     "rust") echo "cargo run";;
     "c") echo "make run";;
@@ -75,17 +89,21 @@ if [ "$lang" == "unknown" ]; then
   echo "Unknown language"
   exit 1
 fi
-args=$(args $lang)
-cmd=$(commands $lang)
+cmd="$(commands $lang)"
+if [ "$(args $lang)" != "" ]; then
+  cmd="$cmd $(args $lang)"
+fi
+if [ "$1" != "" ]; then
+  cmd="$cmd $@"
+fi
 
-cmd="$cmd $args"
 echo "Starting dev server for $(blue $lang) at $(cyan "$(date)")"
 echo "\tw $(green "$cmd")\n\t@$(yellow $PWD)"
 
 # only, go, c, python need a watcher
 # we also pass in all args as is
 if [ "$lang" == "go" ] || [ "$lang" == "c" ] || [ "$lang" == "python" ]; then
-  watch . $cmd $@
+  watch "$cmd"
 else
-  $cmd $@
+  $cmd
 fi
